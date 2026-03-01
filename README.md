@@ -1,4 +1,4 @@
-# Photo to PDF
+# Photos to PDF
 
 A React web app that converts a folder of numbered photos into a styled PDF album with configurable page numbers, fonts, colors, and per-page settings.
 
