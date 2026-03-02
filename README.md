@@ -1,4 +1,4 @@
-# Photo to PDF
+# Photos to PDF
 
 A client-side tool for creating photo albums from images directly into PDFs. Select a folder of photos, customize the layout, preview each page, and generate a styled PDF album -- all in the browser with no server required.
 
