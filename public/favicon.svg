@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Back photo (tilted) -->
+  <rect x="4" y="3" width="20" height="16" rx="1.5" fill="#4a5568" stroke="#718096" stroke-width="0.8" transform="rotate(-6 14 11)"/>
+  <!-- Front photo -->
+  <rect x="6" y="5" width="20" height="16" rx="1.5" fill="#2d3748" stroke="#a0aec0" stroke-width="0.8"/>
+  <!-- Mountain/landscape scene inside front photo -->
+  <rect x="7" y="6" width="18" height="14" rx="0.5" fill="#1a202c"/>
+  <!-- Sun -->
+  <circle cx="21" cy="9.5" r="2" fill="#f6ad55"/>
+  <!-- Mountains -->
+  <polygon points="7,20 13,11 19,20" fill="#2b6cb0"/>
+  <polygon points="14,20 19,13 25,20" fill="#3182ce"/>
+  <!-- PDF badge -->
+  <rect x="17" y="21" width="14" height="10" rx="2" fill="#e53e3e"/>
+  <text x="24" y="28.5" font-family="Arial,sans-serif" font-size="6.5" font-weight="bold" fill="white" text-anchor="middle">PDF</text>
+</svg>

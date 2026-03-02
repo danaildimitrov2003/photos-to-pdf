@@ -10,6 +10,8 @@ A client-side tool for creating photo albums from images directly into PDFs. Sel
 
 ### Page Layout & Customization
 - **7 page size presets** -- A4, Letter, A3, A5, Square, 4x6 Photo, 5x7 Photo, plus custom dimensions (mm)
+- **Insert empty pages** -- Add blank pages anywhere in the album for section dividers, title pages, or notes. Empty pages support titles, page numbers, and background colors. You can also assign a photo to an empty page later.
+- **Delete pages** -- Remove any page from the album
 - **Draggable elements** -- Drag the image, page number, and title freely within the page preview, with snap guides at common positions
 - **Resizable images** -- 8 resize handles: corner handles preserve aspect ratio, edge handles stretch freely
 - **Image sizing** -- Unified slider (scales proportionally) + independent W%/H% stepper inputs
@@ -22,8 +24,13 @@ A client-side tool for creating photo albums from images directly into PDFs. Sel
 - **Start numbering from page N** -- Skip numbering on the first N pages
 
 ### Titles
-- **Image titles** -- Show/hide per-page titles with customizable text, font, size, color, and position
+- **Multi-line title bounding box** -- Titles render inside a resizable bounding box (like Photoshop's text tool). Text wraps within the box and clips at the bottom edge.
+- **Resizable title box** -- 8 resize handles (corners + edges) to adjust the title area directly in the preview
+- **Title box size controls** -- W%/H% stepper inputs in both Global and Page settings
+- **Text alignment** -- Left, center, or right alignment within the bounding box
+- **Multi-line input** -- Title text input is a textarea; press Enter for manual line breaks
 - **Auto-generated titles** -- Defaults to the filename (without extension) if no custom title is set
+- **Per-page customization** -- Font, size, color, box size, alignment, and position are all overridable per page
 
 ### Fonts & Colors
 - **Built-in fonts** -- Chopin Script, Papyrus, Dancing Script, Great Vibes, Playfair Display, Cinzel, Cormorant Garamond, Satisfy, Pacifico, Lobster
@@ -67,8 +74,9 @@ npm run build
 1. Click **Select Folder** in the sidebar and choose a folder containing your photos.
 2. Adjust global settings (page size, image size, font, colors, numbering) in the **Global** tab.
 3. Switch to the **This Page** tab to override settings for individual pages.
-4. Drag elements in the preview to reposition them. Drag image corners to resize (preserves aspect ratio) or edges to stretch freely.
-5. Click **Generate PDF** to export. The PDF will download as `photo-album.pdf`.
+4. Use **Insert Empty Page** to add blank pages for section dividers or title pages. You can assign a photo to an empty page with the **Add Photo** button.
+5. Drag elements in the preview to reposition them. Drag image corners to resize (preserves aspect ratio) or edges to stretch freely. Title boxes can be resized the same way to control the text flow area.
+6. Click **Generate PDF** to export. The PDF will download as `photo-album.pdf`.
 
 ## Project Structure
 

@@ -42,18 +42,22 @@ export interface PageConfig {
   titleFont: string;
   titleFontSize: number;
   titleFontColor: string;
-  titlePosition: Position;
+  titlePosition: Position;        // top-left corner of the bounding box (%)
+  titleWidthPct: number;          // bounding box width as % of page (10-100)
+  titleHeightPct: number;         // bounding box height as % of page (5-100)
+  titleTextAlign: 'left' | 'center' | 'right';
 }
 
 export interface PhotoEntry {
-  file: File;
+  file: File | null;          // null for empty pages
   name: string;
   num: number;
-  dataUrl: string;
-  lastModified: number;     // file.lastModified timestamp
-  fileSize: number;         // file.size in bytes
-  naturalWidth: number;     // image natural width in pixels
-  naturalHeight: number;    // image natural height in pixels
+  dataUrl: string;            // empty string for empty pages
+  lastModified: number;       // file.lastModified timestamp
+  fileSize: number;           // file.size in bytes
+  naturalWidth: number;       // image natural width in pixels (0 for empty pages)
+  naturalHeight: number;      // image natural height in pixels (0 for empty pages)
+  isEmpty?: boolean;          // true for manually inserted empty pages
 }
 
 export interface CustomFont {
@@ -77,9 +81,12 @@ export const DEFAULT_PAGE_CONFIG: PageConfig = {
   showTitle: false,
   titleText: '',
   titleFont: 'Chopin Script',
-  titleFontSize: 12,
+  titleFontSize: 30,
   titleFontColor: '#000000',
-  titlePosition: { x: 50, y: 8 },         // centered near top
+  titlePosition: { x: 10, y: 4 },          // top-left anchor of bounding box
+  titleWidthPct: 80,
+  titleHeightPct: 12,
+  titleTextAlign: 'center',
 };
 
 export const BUILT_IN_FONTS = [

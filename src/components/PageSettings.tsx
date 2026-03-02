@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useStore, resolvePageConfig } from '../store/useStore';
 import { BG_COLOR_PRESETS, FONT_COLOR_PRESETS } from '../types';
 import { ColorPicker } from './ColorPicker';
@@ -14,15 +15,21 @@ export function PageSettings() {
   const clearPageOverride = useStore((s) => s.clearPageOverride);
   const clearAllPageOverrides = useStore((s) => s.clearAllPageOverrides);
   const pageSize = useStore((s) => s.pageSize);
+  const insertEmptyPage = useStore((s) => s.insertEmptyPage);
+  const setPagePhoto = useStore((s) => s.setPagePhoto);
+  const deletePage = useStore((s) => s.deletePage);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (photos.length === 0) return null;
 
   const config = resolvePageConfig(globalConfig, pageOverrides, currentPage);
   const overrides = pageOverrides[currentPage] || {};
   const hasOverrides = Object.keys(overrides).length > 0;
+  const photo = photos[currentPage];
+  const isEmptyPage = photo?.isEmpty === true;
 
   // Compute effective image dimensions (aspect-ratio-aware when no override)
-  const photo = photos[currentPage];
   const effectiveDims = computeEffectiveImageDims(
     photo, config, pageOverrides, currentPage,
     pageSize.widthMm, pageSize.heightMm,
@@ -63,11 +70,33 @@ export function PageSettings() {
   // Slider value from the larger of effective W/H
   const sliderValue = Math.round(Math.max(effectiveDims.widthPct, effectiveDims.heightPct));
 
+  // Handle adding a photo to an empty page
+  const handleAddPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      const img = new Image();
+      img.onload = () => {
+        setPagePhoto(currentPage, file, dataUrl, img.naturalWidth, img.naturalHeight);
+      };
+      img.onerror = () => {
+        setPagePhoto(currentPage, file, dataUrl, 1, 1);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+    // Reset the input so the same file can be selected again
+    e.target.value = '';
+  };
+
   return (
     <div className="page-settings">
       <div className="page-settings-header">
         <span className="section-label">
           Page {currentPage + 1} Settings
+          {isEmptyPage && <span className="empty-page-tag">EMPTY</span>}
         </span>
         {hasOverrides && (
           <button
@@ -75,6 +104,44 @@ export function PageSettings() {
             onClick={() => clearAllPageOverrides(currentPage)}
           >
             Reset All
+          </button>
+        )}
+      </div>
+
+      {/* Page management buttons */}
+      <div className="page-actions">
+        <button
+          className="btn btn-sm"
+          onClick={() => insertEmptyPage(currentPage)}
+          title="Insert an empty page after this one"
+        >
+          + Insert Empty Page
+        </button>
+        {isEmptyPage && (
+          <>
+            <button
+              className="btn btn-sm"
+              onClick={() => fileInputRef.current?.click()}
+              title="Add a photo to this empty page"
+            >
+              Add Photo
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp,image/bmp,image/gif"
+              style={{ display: 'none' }}
+              onChange={handleAddPhoto}
+            />
+          </>
+        )}
+        {(isEmptyPage || photos.length > 1) && (
+          <button
+            className="btn btn-sm btn-danger"
+            onClick={() => deletePage(currentPage)}
+            title="Remove this page"
+          >
+            Delete Page
           </button>
         )}
       </div>
@@ -107,67 +174,69 @@ export function PageSettings() {
         </div>
       )}
 
-      {/* Image size — unified slider + W/H fields */}
-      <div className="section">
-        <div className="setting-row">
-          <span className="section-label">Image Size</span>
-          {hasImageSizeOverride && (
-            <button
-              className="btn-reset"
-              onClick={resetImageSize}
-              title="Reset to global default"
-            >
-              Reset
-            </button>
-          )}
-        </div>
-        <input
-          type="range"
-          min="10"
-          max="100"
-          value={sliderValue}
-          onChange={(e) => {
-            const v = parseInt(e.target.value);
-            const curMax = Math.max(effectiveDims.widthPct, effectiveDims.heightPct);
-            if (curMax <= 0) {
+      {/* Image size — unified slider + W/H fields (hidden for empty pages) */}
+      {!isEmptyPage && (
+        <div className="section">
+          <div className="setting-row">
+            <span className="section-label">Image Size</span>
+            {hasImageSizeOverride && (
+              <button
+                className="btn-reset"
+                onClick={resetImageSize}
+                title="Reset to global default"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+          <input
+            type="range"
+            min="10"
+            max="100"
+            value={sliderValue}
+            onChange={(e) => {
+              const v = parseInt(e.target.value);
+              const curMax = Math.max(effectiveDims.widthPct, effectiveDims.heightPct);
+              if (curMax <= 0) {
+                setPageOverride(currentPage, {
+                  imageWidthPct: v,
+                  imageHeightPct: v,
+                  photoScale: v / 100,
+                });
+                return;
+              }
+              const scale = v / curMax;
               setPageOverride(currentPage, {
-                imageWidthPct: v,
-                imageHeightPct: v,
+                imageWidthPct: Math.round(Math.max(10, Math.min(100, effectiveDims.widthPct * scale))),
+                imageHeightPct: Math.round(Math.max(10, Math.min(100, effectiveDims.heightPct * scale))),
                 photoScale: v / 100,
               });
-              return;
-            }
-            const scale = v / curMax;
-            setPageOverride(currentPage, {
-              imageWidthPct: Math.round(Math.max(10, Math.min(100, effectiveDims.widthPct * scale))),
-              imageHeightPct: Math.round(Math.max(10, Math.min(100, effectiveDims.heightPct * scale))),
-              photoScale: v / 100,
-            });
-          }}
-          className="slider"
-        />
-        <div className="image-size-fields">
-          <StepperInput
-            label="W"
-            value={Math.round(effectiveDims.widthPct)}
-            min={10}
-            max={100}
-            unit="%"
-            onChange={(v) => setPageOverride(currentPage, { imageWidthPct: v, photoScale: v / 100 })}
+            }}
+            className="slider"
           />
-          <StepperInput
-            label="H"
-            value={Math.round(effectiveDims.heightPct)}
-            min={10}
-            max={100}
-            unit="%"
-            onChange={(v) => setPageOverride(currentPage, { imageHeightPct: v })}
-          />
+          <div className="image-size-fields">
+            <StepperInput
+              label="W"
+              value={Math.round(effectiveDims.widthPct)}
+              min={10}
+              max={100}
+              unit="%"
+              onChange={(v) => setPageOverride(currentPage, { imageWidthPct: v, photoScale: v / 100 })}
+            />
+            <StepperInput
+              label="H"
+              value={Math.round(effectiveDims.heightPct)}
+              min={10}
+              max={100}
+              unit="%"
+              onChange={(v) => setPageOverride(currentPage, { imageHeightPct: v })}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Image position */}
-      {hasPositionOverride('imagePosition') && (
+      {/* Image position (hidden for empty pages) */}
+      {!isEmptyPage && hasPositionOverride('imagePosition') && (
         <div className="setting-row">
           <span className="section-label">
             Image Pos: {Math.round(config.imagePosition.x)}%, {Math.round(config.imagePosition.y)}%
@@ -271,11 +340,11 @@ export function PageSettings() {
               <span className="section-label">Title Text</span>
               {renderResetBtn('titleText')}
             </div>
-            <input
-              type="text"
+            <textarea
               value={config.titleText || ''}
-              placeholder={photos[currentPage]?.name?.replace(/\.[^.]+$/, '') || 'Enter title...'}
+              placeholder={isEmptyPage ? 'Enter title...' : (photos[currentPage]?.name?.replace(/\.[^.]+$/, '') || 'Enter title...')}
               onChange={(e) => setOverride('titleText', e.target.value)}
+              rows={2}
             />
           </div>
 
@@ -311,6 +380,62 @@ export function PageSettings() {
             onChange={(c) => setOverride('titleFontColor', c)}
           />
 
+          {/* Title bounding box size */}
+          <div className="section">
+            <div className="setting-row">
+              <span className="section-label">Title Box Size</span>
+              {('titleWidthPct' in overrides || 'titleHeightPct' in overrides) && (
+                <button
+                  className="btn-reset"
+                  onClick={() => {
+                    if ('titleWidthPct' in overrides) clearPageOverride(currentPage, 'titleWidthPct');
+                    if ('titleHeightPct' in overrides) clearPageOverride(currentPage, 'titleHeightPct');
+                  }}
+                  title="Reset to global default"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+            <div className="image-size-fields">
+              <StepperInput
+                label="W"
+                value={Math.round(config.titleWidthPct)}
+                min={10}
+                max={100}
+                unit="%"
+                onChange={(v) => setOverride('titleWidthPct', v)}
+              />
+              <StepperInput
+                label="H"
+                value={Math.round(config.titleHeightPct)}
+                min={5}
+                max={100}
+                unit="%"
+                onChange={(v) => setOverride('titleHeightPct', v)}
+              />
+            </div>
+          </div>
+
+          {/* Title text alignment */}
+          <div className="section">
+            <div className="setting-row">
+              <span className="section-label">Title Alignment</span>
+              {renderResetBtn('titleTextAlign')}
+            </div>
+            <div className="text-align-group">
+              {(['left', 'center', 'right'] as const).map((a) => (
+                <button
+                  key={a}
+                  className={`text-align-btn ${config.titleTextAlign === a ? 'active' : ''}`}
+                  onClick={() => setOverride('titleTextAlign', a)}
+                >
+                  {a.charAt(0).toUpperCase() + a.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Title position */}
           {hasPositionOverride('titlePosition') && (
             <div className="setting-row">
@@ -331,7 +456,7 @@ export function PageSettings() {
 
       {/* Drag hint */}
       <div className="drag-hint">
-        Drag elements in the preview to reposition. Drag image corners to resize (keeps aspect ratio) or edges to stretch freely.
+        Drag elements in the preview to reposition. Drag image corners to resize (keeps aspect ratio) or edges to stretch freely. Title has a resizable bounding box — drag its edges/corners to resize the text area.
       </div>
     </div>
   );

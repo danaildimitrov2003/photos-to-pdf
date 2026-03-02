@@ -56,7 +56,7 @@ export function Sidebar() {
 
   return (
     <div className="sidebar">
-      <h1>Photo to PDF</h1>
+      <h1>Photos to PDF</h1>
 
       <PhotoLoader />
       <FontManager />

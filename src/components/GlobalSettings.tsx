@@ -249,6 +249,45 @@ export function GlobalSettings() {
             presets={FONT_COLOR_PRESETS}
             onChange={(c) => setGlobalConfig({ titleFontColor: c })}
           />
+
+          {/* Title bounding box size defaults */}
+          <div className="section">
+            <span className="section-label">Title Box Size</span>
+            <div className="image-size-fields">
+              <StepperInput
+                label="W"
+                value={Math.round(globalConfig.titleWidthPct)}
+                min={10}
+                max={100}
+                unit="%"
+                onChange={(v) => setGlobalConfig({ titleWidthPct: v })}
+              />
+              <StepperInput
+                label="H"
+                value={Math.round(globalConfig.titleHeightPct)}
+                min={5}
+                max={100}
+                unit="%"
+                onChange={(v) => setGlobalConfig({ titleHeightPct: v })}
+              />
+            </div>
+          </div>
+
+          {/* Title text alignment default */}
+          <div className="section">
+            <span className="section-label">Title Alignment</span>
+            <div className="text-align-group">
+              {(['left', 'center', 'right'] as const).map((a) => (
+                <button
+                  key={a}
+                  className={`text-align-btn ${globalConfig.titleTextAlign === a ? 'active' : ''}`}
+                  onClick={() => setGlobalConfig({ titleTextAlign: a })}
+                >
+                  {a.charAt(0).toUpperCase() + a.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
         </>
       )}
     </div>

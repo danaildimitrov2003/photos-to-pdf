@@ -68,7 +68,7 @@ export function PhotoLoader() {
           };
           img.src = dataUrl;
         };
-        reader.readAsDataURL(item.file);
+        reader.readAsDataURL(item.file!);
       });
     },
     [setPhotos]
@@ -98,6 +98,24 @@ export function PhotoLoader() {
           ? `${photos.length} photos loaded`
           : 'No photos selected'}
       </div>
+      <button
+        className="btn btn-sm"
+        onClick={() => {
+          setPhotos([{
+            file: null,
+            name: 'Empty Page',
+            num: 0,
+            dataUrl: '',
+            lastModified: Date.now(),
+            fileSize: 0,
+            naturalWidth: 0,
+            naturalHeight: 0,
+            isEmpty: true,
+          }]);
+        }}
+      >
+        Create Empty Album
+      </button>
 
       {photos.length > 0 && (
         <div className="sort-options">

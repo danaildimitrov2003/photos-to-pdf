@@ -17,8 +17,40 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+/**
+ * Word-wrap text into lines that fit within maxWidth.
+ * Handles explicit \n newlines and word-level wrapping.
+ */
+function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const paragraphs = text.split('\n');
+  const lines: string[] = [];
+
+  for (const para of paragraphs) {
+    if (para === '') {
+      lines.push('');
+      continue;
+    }
+    const words = para.split(/\s+/);
+    let currentLine = '';
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+  }
+
+  return lines;
+}
+
 export function renderPageToCanvas(
-  photoImg: HTMLImageElement,
+  photoImg: HTMLImageElement | null,
   pageNumber: number | null,
   config: PageConfig,
   pageSize: PageSize,
@@ -38,29 +70,53 @@ export function renderPageToCanvas(
   ctx.fillStyle = config.bgColor;
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-  // Image area from effective dimensions (aspect-ratio-aware)
-  const drawW = (effectiveWidthPct / 100) * CANVAS_W;
-  const drawH = (effectiveHeightPct / 100) * CANVAS_H;
+  // Image (only for non-empty pages)
+  if (photoImg) {
+    // Image area from effective dimensions (aspect-ratio-aware)
+    const drawW = (effectiveWidthPct / 100) * CANVAS_W;
+    const drawH = (effectiveHeightPct / 100) * CANVAS_H;
 
-  // imagePosition is the center point as percentage of canvas
-  const centerX = (config.imagePosition.x / 100) * CANVAS_W;
-  const centerY = (config.imagePosition.y / 100) * CANVAS_H;
-  const drawX = centerX - drawW / 2;
-  const drawY = centerY - drawH / 2;
+    // imagePosition is the center point as percentage of canvas
+    const centerX = (config.imagePosition.x / 100) * CANVAS_W;
+    const centerY = (config.imagePosition.y / 100) * CANVAS_H;
+    const drawX = centerX - drawW / 2;
+    const drawY = centerY - drawH / 2;
 
-  // Draw image at the exact specified dimensions
-  ctx.drawImage(photoImg, drawX, drawY, drawW, drawH);
+    // Draw image at the exact specified dimensions
+    ctx.drawImage(photoImg, drawX, drawY, drawW, drawH);
+  }
 
-  // Title
+  // Title (word-wrapped inside bounding box)
   if (titleText && config.showTitle) {
     const titleFontSizePx = Math.round(config.titleFontSize * (DPI / 72));
     ctx.font = `${titleFontSizePx}px '${config.titleFont}', cursive, fantasy, serif`;
     ctx.fillStyle = config.titleFontColor;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const titleX = (config.titlePosition.x / 100) * CANVAS_W;
-    const titleY = (config.titlePosition.y / 100) * CANVAS_H;
-    ctx.fillText(titleText, titleX, titleY);
+    ctx.textBaseline = 'top';
+
+    // Bounding box in canvas pixels (titlePosition is top-left anchor)
+    const boxX = (config.titlePosition.x / 100) * CANVAS_W;
+    const boxY = (config.titlePosition.y / 100) * CANVAS_H;
+    const boxW = (config.titleWidthPct / 100) * CANVAS_W;
+    const boxH = (config.titleHeightPct / 100) * CANVAS_H;
+
+    const lineHeight = titleFontSizePx * 1.3;
+    const lines = wrapText(ctx, titleText, boxW - 8); // small padding
+    const padding = 4;
+
+    // Set text alignment
+    const align = config.titleTextAlign || 'center';
+    ctx.textAlign = align;
+
+    let alignX: number;
+    if (align === 'left') alignX = boxX + padding;
+    else if (align === 'right') alignX = boxX + boxW - padding;
+    else alignX = boxX + boxW / 2; // center
+
+    for (let i = 0; i < lines.length; i++) {
+      const lineY = boxY + padding + i * lineHeight;
+      if (lineY + lineHeight > boxY + boxH) break; // clip to box
+      ctx.fillText(lines[i], alignX, lineY);
+    }
   }
 
   // Page number
@@ -101,7 +157,10 @@ export async function generatePDF(
     onProgress(pct, `Processing page ${i + 1} of ${photos.length}...`);
 
     const config = getPageConfig(i);
-    const img = await loadImage(photos[i].dataUrl);
+    const isEmpty = photos[i].isEmpty === true;
+
+    // Load image only for non-empty pages
+    const img = isEmpty ? null : await loadImage(photos[i].dataUrl);
 
     // Compute effective image dimensions (aspect-ratio-aware when no override)
     const dims = computeEffectiveImageDims(
@@ -118,7 +177,11 @@ export async function generatePDF(
     // Determine title text
     let titleText: string | null = null;
     if (config.showTitle) {
-      titleText = config.titleText || photos[i].name.replace(/\.[^.]+$/, '');
+      if (config.titleText) {
+        titleText = config.titleText;
+      } else if (!isEmpty) {
+        titleText = photos[i].name.replace(/\.[^.]+$/, '');
+      }
     }
 
     const canvas = renderPageToCanvas(

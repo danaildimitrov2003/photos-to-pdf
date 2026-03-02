@@ -9,45 +9,88 @@ import type {
 import { DEFAULT_PAGE_CONFIG, PAGE_SIZES } from '../types';
 
 export function sortPhotos(photos: PhotoEntry[], mode: SortMode): PhotoEntry[] {
-  const arr = [...photos];
+  // Separate empty pages from real photos so empty pages keep their positions
+  const emptySlots: { index: number; entry: PhotoEntry }[] = [];
+  const realPhotos: PhotoEntry[] = [];
+  photos.forEach((p, i) => {
+    if (p.isEmpty) {
+      emptySlots.push({ index: i, entry: p });
+    } else {
+      realPhotos.push(p);
+    }
+  });
+
+  // Sort only real photos
+  const sorted = [...realPhotos];
   switch (mode) {
     case 'name':
-      return arr.sort((a, b) => {
+      sorted.sort((a, b) => {
         const numA = a.name.match(/(\d+)/);
         const numB = b.name.match(/(\d+)/);
         const nA = numA ? parseInt(numA[1], 10) : 999999;
         const nB = numB ? parseInt(numB[1], 10) : 999999;
         return nA - nB;
       });
+      break;
     case 'reverse-name':
-      return arr.sort((a, b) => {
+      sorted.sort((a, b) => {
         const numA = a.name.match(/(\d+)/);
         const numB = b.name.match(/(\d+)/);
         const nA = numA ? parseInt(numA[1], 10) : 999999;
         const nB = numB ? parseInt(numB[1], 10) : 999999;
         return nB - nA;
       });
+      break;
     case 'date':
-      return arr.sort((a, b) => a.lastModified - b.lastModified);
+      sorted.sort((a, b) => a.lastModified - b.lastModified);
+      break;
     case 'size':
-      return arr.sort((a, b) => a.fileSize - b.fileSize);
+      sorted.sort((a, b) => a.fileSize - b.fileSize);
+      break;
     case 'random':
       // Fisher-Yates shuffle
-      for (let i = arr.length - 1; i > 0; i--) {
+      for (let i = sorted.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
+        [sorted[i], sorted[j]] = [sorted[j], sorted[i]];
       }
-      return arr;
+      break;
     case 'type':
-      return arr.sort((a, b) => {
+      sorted.sort((a, b) => {
         const extA = a.name.split('.').pop()?.toLowerCase() || '';
         const extB = b.name.split('.').pop()?.toLowerCase() || '';
         if (extA !== extB) return extA.localeCompare(extB);
         return a.name.localeCompare(b.name);
       });
-    default:
-      return arr;
+      break;
   }
+
+  // Re-insert empty pages at their original indices (clamped to new length)
+  const result = [...sorted];
+  for (const slot of emptySlots) {
+    const insertAt = Math.min(slot.index, result.length);
+    result.splice(insertAt, 0, slot.entry);
+  }
+  return result;
+}
+
+/**
+ * Shift all page-override keys above `afterIndex` by `delta` (+1 for insert, -1 for delete).
+ */
+function shiftOverrides(
+  overrides: Record<number, Partial<PageConfig>>,
+  afterIndex: number,
+  delta: number,
+): Record<number, Partial<PageConfig>> {
+  const result: Record<number, Partial<PageConfig>> = {};
+  for (const [key, value] of Object.entries(overrides)) {
+    const idx = Number(key);
+    if (idx > afterIndex) {
+      result[idx + delta] = value;
+    } else {
+      result[idx] = value;
+    }
+  }
+  return result;
 }
 
 interface AppState {
@@ -82,6 +125,17 @@ interface AppState {
   // Page numbering: which page number to start counting from
   numberingStartPage: number; // 0-indexed: page numbers start displaying from this page
   setNumberingStartPage: (page: number) => void;
+
+  // Empty page / page management
+  insertEmptyPage: (afterIndex: number) => void;
+  setPagePhoto: (
+    pageIndex: number,
+    file: File,
+    dataUrl: string,
+    naturalWidth: number,
+    naturalHeight: number,
+  ) => void;
+  deletePage: (pageIndex: number) => void;
 
   // Custom fonts
   customFonts: CustomFont[];
@@ -155,6 +209,90 @@ export const useStore = create<AppState>((set, get) => ({
 
   numberingStartPage: 1,
   setNumberingStartPage: (page) => set({ numberingStartPage: page }),
+
+  insertEmptyPage: (afterIndex) =>
+    set((s) => {
+      const newPhotos = [...s.photos];
+      const emptyEntry: PhotoEntry = {
+        file: null,
+        name: `Empty Page`,
+        num: 0,
+        dataUrl: '',
+        lastModified: Date.now(),
+        fileSize: 0,
+        naturalWidth: 0,
+        naturalHeight: 0,
+        isEmpty: true,
+      };
+      newPhotos.splice(afterIndex + 1, 0, emptyEntry);
+
+      // Shift all overrides with index > afterIndex by +1
+      const newOverrides = shiftOverrides(s.pageOverrides, afterIndex, 1);
+
+      // If numberingStartPage is after the insertion point, shift it too
+      const newStart =
+        s.numberingStartPage > afterIndex
+          ? s.numberingStartPage + 1
+          : s.numberingStartPage;
+
+      return {
+        photos: newPhotos,
+        pageOverrides: newOverrides,
+        currentPage: afterIndex + 1,
+        numberingStartPage: newStart,
+      };
+    }),
+
+  setPagePhoto: (pageIndex, file, dataUrl, naturalWidth, naturalHeight) =>
+    set((s) => {
+      const newPhotos = [...s.photos];
+      newPhotos[pageIndex] = {
+        ...newPhotos[pageIndex],
+        file,
+        name: file.name,
+        dataUrl,
+        lastModified: file.lastModified,
+        fileSize: file.size,
+        naturalWidth,
+        naturalHeight,
+        isEmpty: false,
+      };
+      return { photos: newPhotos };
+    }),
+
+  deletePage: (pageIndex) =>
+    set((s) => {
+      if (s.photos.length <= 1) return {}; // don't delete the last page
+
+      const newPhotos = [...s.photos];
+      newPhotos.splice(pageIndex, 1);
+
+      // Remove override at pageIndex, then shift all above it by -1
+      const withoutDeleted = { ...s.pageOverrides };
+      delete withoutDeleted[pageIndex];
+      const newOverrides = shiftOverrides(withoutDeleted, pageIndex - 1, -1);
+
+      // Adjust currentPage
+      let newCurrent = s.currentPage;
+      if (newCurrent >= newPhotos.length) {
+        newCurrent = newPhotos.length - 1;
+      }
+
+      // Adjust numberingStartPage
+      let newStart = s.numberingStartPage;
+      if (newStart > pageIndex) {
+        newStart = Math.max(0, newStart - 1);
+      } else if (newStart === pageIndex && newStart >= newPhotos.length) {
+        newStart = Math.max(0, newPhotos.length - 1);
+      }
+
+      return {
+        photos: newPhotos,
+        pageOverrides: newOverrides,
+        currentPage: newCurrent,
+        numberingStartPage: newStart,
+      };
+    }),
 
   customFonts: [],
   addCustomFont: (font) =>

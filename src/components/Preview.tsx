@@ -36,6 +36,7 @@ export function Preview() {
   const pageRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState<DragTarget>(null);
   const [resizing, setResizing] = useState<ResizeHandle>(null);
+  const [titleResizing, setTitleResizing] = useState<ResizeHandle>(null);
   const [activeSnapLines, setActiveSnapLines] = useState<{ x: number[]; y: number[] }>({ x: [], y: [] });
 
   const dragStartRef = useRef<{
@@ -71,6 +72,7 @@ export function Preview() {
     if (!config.showTitle) return null;
     if (config.titleText) return config.titleText;
     if (photos.length > 0 && photos[currentPage]) {
+      if (photos[currentPage].isEmpty) return 'Empty Page';
       return photos[currentPage].name.replace(/\.[^.]+$/, '');
     }
     return null;
@@ -95,12 +97,13 @@ export function Preview() {
 
   // Get current photo (may be undefined if no photos loaded)
   const photo = photos.length > 0 ? photos[currentPage] : null;
+  const isEmptyPage = photo?.isEmpty === true;
 
   // Compute aspect-ratio-correct image dimensions.
   // When there's no per-page size override, this fits the image into the
   // global bounding box while preserving the photo's natural aspect ratio.
   const effectiveDims = useMemo(() => {
-    if (!photo) return { widthPct: config.imageWidthPct, heightPct: config.imageHeightPct };
+    if (!photo || isEmptyPage) return { widthPct: config.imageWidthPct, heightPct: config.imageHeightPct };
     return computeEffectiveImageDims(
       photo,
       config,
@@ -109,7 +112,7 @@ export function Preview() {
       pageSize.widthMm,
       pageSize.heightMm,
     );
-  }, [photo, config, pageOverrides, currentPage, pageSize.widthMm, pageSize.heightMm]);
+  }, [photo, isEmptyPage, config, pageOverrides, currentPage, pageSize.widthMm, pageSize.heightMm]);
 
   // Drag handler for moving elements
   const handleMouseDown = useCallback(
@@ -309,7 +312,81 @@ export function Preview() {
     [effectiveDims.widthPct, effectiveDims.heightPct, config.imagePosition, currentPage, setPageOverride, pageSize.widthMm, pageSize.heightMm]
   );
 
-  const isInteracting = dragging !== null || resizing !== null;
+  // Resize handler for title bounding box (free resize, no aspect lock)
+  const handleTitleResizeMouseDown = useCallback(
+    (handle: ResizeHandle, e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setTitleResizing(handle);
+
+      const startW = config.titleWidthPct;
+      const startH = config.titleHeightPct;
+
+      dragStartRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        startPos: { ...config.titlePosition },
+        startW,
+        startH,
+        imageAspect: 1,
+      };
+
+      const handleMouseMove = (ev: MouseEvent) => {
+        if (!pageRef.current || !handle) return;
+        const rect = pageRef.current.getBoundingClientRect();
+        const dx = ev.clientX - dragStartRef.current.startX;
+        const dy = ev.clientY - dragStartRef.current.startY;
+
+        const dPctX = (dx / rect.width) * 100;
+        const dPctY = (dy / rect.height) * 100;
+
+        const { startW: sw, startH: sh, startPos } = dragStartRef.current;
+
+        let newW = sw;
+        let newH = sh;
+        let newPos = { ...startPos };
+
+        // Title uses top-left anchor, so resizing from edges/corners works differently:
+        // - Right/bottom edges: just grow/shrink, position stays
+        // - Left/top edges: position shifts and size changes inversely
+        if (handle === 'e' || handle === 'ne' || handle === 'se') {
+          newW = Math.max(10, Math.min(100, sw + dPctX));
+        }
+        if (handle === 'w' || handle === 'nw' || handle === 'sw') {
+          newW = Math.max(10, Math.min(100, sw - dPctX));
+          newPos.x = startPos.x + (sw - newW);
+        }
+        if (handle === 's' || handle === 'se' || handle === 'sw') {
+          newH = Math.max(5, Math.min(100, sh + dPctY));
+        }
+        if (handle === 'n' || handle === 'nw' || handle === 'ne') {
+          newH = Math.max(5, Math.min(100, sh - dPctY));
+          newPos.y = startPos.y + (sh - newH);
+        }
+
+        setPageOverride(currentPage, {
+          titleWidthPct: Math.round(newW * 10) / 10,
+          titleHeightPct: Math.round(newH * 10) / 10,
+          titlePosition: {
+            x: Math.max(0, Math.min(100, newPos.x)),
+            y: Math.max(0, Math.min(100, newPos.y)),
+          },
+        });
+      };
+
+      const handleMouseUp = () => {
+        setTitleResizing(null);
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    },
+    [config.titleWidthPct, config.titleHeightPct, config.titlePosition, currentPage, setPageOverride]
+  );
+
+  const isInteracting = dragging !== null || resizing !== null || titleResizing !== null;
 
   if (photos.length === 0) {
     return (
@@ -365,45 +442,58 @@ export function Preview() {
           />
         ))}
 
-        {/* Draggable + Resizable image */}
-        <div
-          className={`draggable-element draggable-image ${dragging === 'image' || resizing ? 'active-drag' : ''}`}
-          style={{
-            width: `${effectiveDims.widthPct}%`,
-            height: `${effectiveDims.heightPct}%`,
-            left: `${config.imagePosition.x}%`,
-            top: `${config.imagePosition.y}%`,
-            transform: 'translate(-50%, -50%)',
-          }}
-          onMouseDown={(e) => handleMouseDown('image', e)}
-        >
-          <img src={photo!.dataUrl} alt={photo!.name} draggable={false} />
+        {/* Draggable + Resizable image (only for pages with photos) */}
+        {!isEmptyPage && photo && photo.dataUrl && (
+          <div
+            className={`draggable-element draggable-image ${dragging === 'image' || resizing ? 'active-drag' : ''}`}
+            style={{
+              width: `${effectiveDims.widthPct}%`,
+              height: `${effectiveDims.heightPct}%`,
+              left: `${config.imagePosition.x}%`,
+              top: `${config.imagePosition.y}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+            onMouseDown={(e) => handleMouseDown('image', e)}
+          >
+            <img src={photo.dataUrl} alt={photo.name} draggable={false} />
 
-          {/* Resize handles */}
-          {handles.map((h) => (
-            <div
-              key={h}
-              className={`resize-handle resize-handle-${h}`}
-              onMouseDown={(e) => handleResizeMouseDown(h, e)}
-            />
-          ))}
-        </div>
+            {/* Resize handles */}
+            {handles.map((h) => (
+              <div
+                key={h}
+                className={`resize-handle resize-handle-${h}`}
+                onMouseDown={(e) => handleResizeMouseDown(h, e)}
+              />
+            ))}
+          </div>
+        )}
 
-        {/* Draggable title */}
+        {/* Draggable + Resizable title bounding box */}
         {titleText && (
           <div
-            className={`draggable-element draggable-title ${dragging === 'title' ? 'active-drag' : ''}`}
+            className={`draggable-element draggable-title ${dragging === 'title' || titleResizing ? 'active-drag' : ''}`}
             style={{
               left: `${config.titlePosition.x}%`,
               top: `${config.titlePosition.y}%`,
-              transform: 'translate(-50%, -50%)',
+              width: `${config.titleWidthPct}%`,
+              height: `${config.titleHeightPct}%`,
               fontFamily: `'${config.titleFont}', cursive, fantasy, serif`,
               fontSize: `${config.titleFontSize}px`,
               color: config.titleFontColor,
+              textAlign: config.titleTextAlign,
             }}
             onMouseDown={(e) => handleMouseDown('title', e)}
           >
             {titleText}
+
+            {/* Resize handles for title bounding box */}
+            {handles.map((h) => (
+              <div
+                key={`title-${h}`}
+                className={`resize-handle resize-handle-${h}`}
+                onMouseDown={(e) => handleTitleResizeMouseDown(h, e)}
+              />
+            ))}
           </div>
         )}
 
