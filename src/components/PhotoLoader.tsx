@@ -3,12 +3,14 @@ import { useStore } from '../store/useStore';
 import type { PhotoEntry, SortMode } from '../types';
 
 const SORT_LABELS: Record<SortMode, string> = {
-  'name': 'Name (numeric)',
-  'reverse-name': 'Name (reverse)',
-  'date': 'Date modified',
-  'size': 'File size',
-  'random': 'Random',
-  'type': 'File type',
+  'name': 'Name (A-Z, numeric)',
+  'reverse-name': 'Name (Z-A, numeric)',
+  'date-newest': 'Date modified (newest first)',
+  'date-oldest': 'Date modified (oldest first)',
+  'size-smallest': 'File size (smallest first)',
+  'size-largest': 'File size (largest first)',
+  'type': 'File type (grouped)',
+  'random': 'Random shuffle',
 };
 
 export function PhotoLoader() {

@@ -1,4 +1,4 @@
-export type SortMode = 'name' | 'date' | 'random' | 'size' | 'reverse-name' | 'type';
+export type SortMode = 'name' | 'date-newest' | 'date-oldest' | 'random' | 'size-smallest' | 'size-largest' | 'reverse-name' | 'type';
 
 // Normalized position: x/y are percentages (0-100) of page dimensions
 export interface Position {
@@ -70,7 +70,7 @@ export const DEFAULT_PAGE_CONFIG: PageConfig = {
   photoScale: 0.75,
   showPageNumber: true,
   font: 'Chopin Script',
-  fontSize: 14,
+  fontSize: 30,
   fontColor: '#000000',
   bgColor: '#FFFFFF',
   isCover: false,

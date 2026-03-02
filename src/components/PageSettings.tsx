@@ -17,6 +17,7 @@ export function PageSettings() {
   const pageSize = useStore((s) => s.pageSize);
   const insertEmptyPage = useStore((s) => s.insertEmptyPage);
   const setPagePhoto = useStore((s) => s.setPagePhoto);
+  const clearPagePhoto = useStore((s) => s.clearPagePhoto);
   const deletePage = useStore((s) => s.deletePage);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -134,6 +135,15 @@ export function PageSettings() {
               onChange={handleAddPhoto}
             />
           </>
+        )}
+        {!isEmptyPage && (
+          <button
+            className="btn btn-sm btn-danger"
+            onClick={() => clearPagePhoto(currentPage)}
+            title="Remove the photo, turning this into an empty page"
+          >
+            Remove Photo
+          </button>
         )}
         {(isEmptyPage || photos.length > 1) && (
           <button

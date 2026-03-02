@@ -41,11 +41,17 @@ export function sortPhotos(photos: PhotoEntry[], mode: SortMode): PhotoEntry[] {
         return nB - nA;
       });
       break;
-    case 'date':
+    case 'date-oldest':
       sorted.sort((a, b) => a.lastModified - b.lastModified);
       break;
-    case 'size':
+    case 'date-newest':
+      sorted.sort((a, b) => b.lastModified - a.lastModified);
+      break;
+    case 'size-smallest':
       sorted.sort((a, b) => a.fileSize - b.fileSize);
+      break;
+    case 'size-largest':
+      sorted.sort((a, b) => b.fileSize - a.fileSize);
       break;
     case 'random':
       // Fisher-Yates shuffle
@@ -136,6 +142,7 @@ interface AppState {
     naturalHeight: number,
   ) => void;
   deletePage: (pageIndex: number) => void;
+  clearPagePhoto: (pageIndex: number) => void;
 
   // Custom fonts
   customFonts: CustomFont[];
@@ -256,6 +263,23 @@ export const useStore = create<AppState>((set, get) => ({
         naturalWidth,
         naturalHeight,
         isEmpty: false,
+      };
+      return { photos: newPhotos };
+    }),
+
+  clearPagePhoto: (pageIndex) =>
+    set((s) => {
+      const newPhotos = [...s.photos];
+      newPhotos[pageIndex] = {
+        ...newPhotos[pageIndex],
+        file: null,
+        name: 'Empty Page',
+        dataUrl: '',
+        lastModified: Date.now(),
+        fileSize: 0,
+        naturalWidth: 0,
+        naturalHeight: 0,
+        isEmpty: true,
       };
       return { photos: newPhotos };
     }),
