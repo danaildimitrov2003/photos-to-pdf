@@ -1,4 +1,5 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { HexColorPicker } from 'react-colorful';
 import { BG_COLOR_PRESETS, FONT_COLOR_PRESETS } from '../types';
 
 interface ColorPickerProps {
@@ -10,7 +11,22 @@ interface ColorPickerProps {
 
 export function ColorPicker({ label, value, presets, onChange }: ColorPickerProps) {
   const isValidHex = (v: string) => /^#[0-9A-Fa-f]{6}$/.test(v);
-  const nativePickerRef = useRef<HTMLInputElement>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Close popover on outside click
+  const handleClickOutside = useCallback((e: MouseEvent) => {
+    if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+      setPopoverOpen(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (popoverOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [popoverOpen, handleClickOutside]);
 
   return (
     <div className="section">
@@ -54,22 +70,21 @@ export function ColorPicker({ label, value, presets, onChange }: ColorPickerProp
               }
             }}
           />
-          <div
-            className="hex-preview-wrapper"
-            onClick={() => nativePickerRef.current?.click()}
-            title="Click to open color picker"
-          >
+          <div className="hex-preview-wrapper" ref={popoverRef}>
             <div
               className="hex-preview"
               style={{ background: value }}
+              onClick={() => setPopoverOpen((o) => !o)}
+              title="Click to open color picker"
             />
-            <input
-              ref={nativePickerRef}
-              type="color"
-              className="native-color-input"
-              value={value}
-              onChange={(e) => onChange(e.target.value.toUpperCase())}
-            />
+            {popoverOpen && (
+              <div className="color-popover">
+                <HexColorPicker
+                  color={value}
+                  onChange={(c) => onChange(c.toUpperCase())}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

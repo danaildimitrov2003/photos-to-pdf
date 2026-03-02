@@ -296,6 +296,7 @@ select {
   border-radius: 5px;
   border: 1px solid var(--border-light);
   flex-shrink: 0;
+  cursor: pointer;
 }
 
 .hex-preview-wrapper {
@@ -308,16 +309,40 @@ select {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.4);
 }
 
-.native-color-input {
+.color-popover {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 28px;
-  height: 28px;
-  opacity: 0;
-  cursor: pointer;
-  padding: 0;
-  border: none;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  z-index: 100;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* react-colorful dark theme overrides */
+.color-popover .react-colorful {
+  width: 180px;
+  height: 160px;
+}
+
+.color-popover .react-colorful__saturation {
+  border-radius: 6px 6px 0 0;
+  border-bottom: none;
+}
+
+.color-popover .react-colorful__hue {
+  height: 14px;
+  border-radius: 0 0 6px 6px;
+}
+
+.color-popover .react-colorful__pointer {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 /* File info */
@@ -380,11 +405,12 @@ select {
   gap: 0;
   border: 1px solid var(--border-light);
   border-radius: 6px;
-  overflow: hidden;
+  overflow: visible;
+  flex-shrink: 0;
 }
 
 .tab {
-  flex: 1;
+  flex: 1 1 0;
   padding: 8px;
   background: var(--bg-input);
   border: none;
@@ -394,10 +420,16 @@ select {
   cursor: pointer;
   transition: all 0.15s;
   font-family: inherit;
+  min-width: 0;
 }
 
 .tab:first-child {
   border-right: 1px solid var(--border-light);
+  border-radius: 6px 0 0 6px;
+}
+
+.tab:last-child {
+  border-radius: 0 6px 6px 0;
 }
 
 .tab:hover {
@@ -483,6 +515,67 @@ select {
   text-align: center;
 }
 
+/* Sort options */
+.sort-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.sort-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.sort-row select {
+  flex: 1;
+}
+
+/* Custom page size */
+.custom-size-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.size-input-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex: 1;
+}
+
+.size-input-group input {
+  width: 70px;
+  text-align: center;
+}
+
+.size-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.size-separator {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Drag hint */
+.drag-hint {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
 /* ==================== Preview ==================== */
 .preview-container {
   flex: 1;
@@ -496,38 +589,68 @@ select {
   position: relative;
 }
 
+.preview-size-label {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .preview-page {
-  width: 420px;
-  height: 594px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   position: relative;
   transition: background-color 0.2s;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
-.preview-page .photo-container {
+.preview-page.is-dragging {
+  cursor: grabbing;
+}
+
+/* Draggable elements */
+.draggable-element {
+  position: absolute;
+  cursor: grab;
+  user-select: none;
+  transition: box-shadow 0.15s;
+}
+
+.draggable-element:hover {
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.5);
+  z-index: 10;
+}
+
+.draggable-element.active-drag {
+  cursor: grabbing;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.8);
+  z-index: 20;
+}
+
+.draggable-image {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
 }
 
-.preview-page .photo-container img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-}
-
-.preview-page .page-number {
-  position: absolute;
-  bottom: 20px;
+.draggable-image img {
   width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+.draggable-page-number {
+  white-space: nowrap;
   text-align: center;
-  transition: all 0.2s;
+  padding: 2px 6px;
+}
+
+.draggable-title {
+  white-space: nowrap;
+  text-align: center;
+  padding: 2px 8px;
 }
 
 .cover-badge {
@@ -541,6 +664,7 @@ select {
   letter-spacing: 0.1em;
   padding: 3px 8px;
   border-radius: 4px;
+  pointer-events: none;
 }
 
 .preview-footer {
@@ -588,4 +712,201 @@ select {
 .sidebar::-webkit-scrollbar-thumb {
   background: #333;
   border-radius: 3px;
+}
+
+/* ==================== Resize Handles ==================== */
+.resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  border: 1.5px solid #fff;
+  border-radius: 2px;
+  z-index: 30;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.draggable-element:hover .resize-handle,
+.draggable-element.active-drag .resize-handle {
+  opacity: 1;
+}
+
+/* Corner handles */
+.resize-handle-nw {
+  top: -5px;
+  left: -5px;
+  cursor: nw-resize;
+}
+.resize-handle-ne {
+  top: -5px;
+  right: -5px;
+  cursor: ne-resize;
+}
+.resize-handle-sw {
+  bottom: -5px;
+  left: -5px;
+  cursor: sw-resize;
+}
+.resize-handle-se {
+  bottom: -5px;
+  right: -5px;
+  cursor: se-resize;
+}
+
+/* Edge handles */
+.resize-handle-n {
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: n-resize;
+  width: 20px;
+  height: 8px;
+  border-radius: 3px;
+}
+.resize-handle-s {
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: s-resize;
+  width: 20px;
+  height: 8px;
+  border-radius: 3px;
+}
+.resize-handle-w {
+  top: 50%;
+  left: -5px;
+  transform: translateY(-50%);
+  cursor: w-resize;
+  width: 8px;
+  height: 20px;
+  border-radius: 3px;
+}
+.resize-handle-e {
+  top: 50%;
+  right: -5px;
+  transform: translateY(-50%);
+  cursor: e-resize;
+  width: 8px;
+  height: 20px;
+  border-radius: 3px;
+}
+
+/* ==================== Snap Lines ==================== */
+.snap-line {
+  position: absolute;
+  pointer-events: none;
+  z-index: 25;
+}
+
+.snap-line-vertical {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 4px rgba(37, 99, 235, 0.4);
+}
+
+.snap-line-horizontal {
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 4px rgba(37, 99, 235, 0.4);
+}
+
+/* ==================== Stepper Input ==================== */
+.stepper-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stepper-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.stepper-controls {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-input);
+}
+
+.stepper-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+  padding: 0;
+}
+
+.stepper-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.stepper-btn:disabled {
+  color: #444;
+  cursor: not-allowed;
+}
+
+.stepper-value {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  padding: 0 4px;
+  min-width: 40px;
+  justify-content: center;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.stepper-number-input {
+  width: 36px;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  padding: 0;
+  outline: none;
+  font-family: inherit;
+}
+
+.stepper-number-input:focus {
+  background: rgba(37, 99, 235, 0.1);
+  border-radius: 3px;
+}
+
+.stepper-unit {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+/* ==================== Reset Button Group ==================== */
+.reset-btn-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ==================== Image Size Fields ==================== */
+.image-size-fields {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }

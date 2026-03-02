@@ -1,11 +1,48 @@
+export type SortMode = 'name' | 'date' | 'random' | 'size' | 'reverse-name' | 'type';
+
+// Normalized position: x/y are percentages (0-100) of page dimensions
+export interface Position {
+  x: number; // percentage from left (0-100)
+  y: number; // percentage from top (0-100)
+}
+
+export interface PageSize {
+  name: string;
+  widthMm: number;
+  heightMm: number;
+}
+
+export const PAGE_SIZES: PageSize[] = [
+  { name: 'A4', widthMm: 210, heightMm: 297 },
+  { name: 'Letter', widthMm: 215.9, heightMm: 279.4 },
+  { name: 'A3', widthMm: 297, heightMm: 420 },
+  { name: 'A5', widthMm: 148, heightMm: 210 },
+  { name: 'Square (200mm)', widthMm: 200, heightMm: 200 },
+  { name: '4x6 Photo', widthMm: 101.6, heightMm: 152.4 },
+  { name: '5x7 Photo', widthMm: 127, heightMm: 177.8 },
+];
+
 export interface PageConfig {
-  photoScale: number;       // 0.3 to 1.0 (percentage of page)
+  photoScale: number;       // 0.3 to 1.0 (percentage of page) - used as default
   showPageNumber: boolean;
   font: string;
   fontSize: number;
   fontColor: string;
   bgColor: string;
   isCover: boolean;         // if true, no page number, doesn't count in numbering
+  // Position offsets (percentages of page, centered by default)
+  imagePosition: Position;   // center of the image
+  pageNumberPosition: Position; // center of the page number
+  // Per-page image dimensions (percentage of page, independent W/H)
+  imageWidthPct: number;    // 10-100, percentage of page width
+  imageHeightPct: number;   // 10-100, percentage of page height
+  // Title
+  showTitle: boolean;
+  titleText: string;
+  titleFont: string;
+  titleFontSize: number;
+  titleFontColor: string;
+  titlePosition: Position;
 }
 
 export interface PhotoEntry {
@@ -13,6 +50,10 @@ export interface PhotoEntry {
   name: string;
   num: number;
   dataUrl: string;
+  lastModified: number;     // file.lastModified timestamp
+  fileSize: number;         // file.size in bytes
+  naturalWidth: number;     // image natural width in pixels
+  naturalHeight: number;    // image natural height in pixels
 }
 
 export interface CustomFont {
@@ -29,6 +70,16 @@ export const DEFAULT_PAGE_CONFIG: PageConfig = {
   fontColor: '#000000',
   bgColor: '#FFFFFF',
   isCover: false,
+  imagePosition: { x: 50, y: 47 },       // centered, slightly above middle
+  pageNumberPosition: { x: 50, y: 95 },   // centered at bottom
+  imageWidthPct: 75,
+  imageHeightPct: 70,
+  showTitle: false,
+  titleText: '',
+  titleFont: 'Chopin Script',
+  titleFontSize: 12,
+  titleFontColor: '#000000',
+  titlePosition: { x: 50, y: 8 },         // centered near top
 };
 
 export const BUILT_IN_FONTS = [

@@ -14,6 +14,7 @@ export function Sidebar() {
   const globalConfig = useStore((s) => s.globalConfig);
   const pageOverrides = useStore((s) => s.pageOverrides);
   const numberingStartPage = useStore((s) => s.numberingStartPage);
+  const pageSize = useStore((s) => s.pageSize);
   const isGenerating = useStore((s) => s.isGenerating);
   const generationProgress = useStore((s) => s.generationProgress);
   const setIsGenerating = useStore((s) => s.setIsGenerating);
@@ -28,6 +29,7 @@ export function Sidebar() {
       // Snapshot current state for PDF generation
       const configSnapshot = globalConfig;
       const overridesSnapshot = pageOverrides;
+      const pageSizeSnapshot = pageSize;
       const getConfig = (i: number) =>
         resolvePageConfig(configSnapshot, overridesSnapshot, i);
 
@@ -35,6 +37,8 @@ export function Sidebar() {
         photos,
         getConfig,
         numberingStartPage,
+        pageSizeSnapshot,
+        overridesSnapshot,
         (pct, _msg) => {
           setGenerationProgress(pct);
         }
