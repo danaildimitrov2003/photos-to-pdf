@@ -14,6 +14,8 @@ export function GlobalSettings() {
   const setPageSize = useStore((s) => s.setPageSize);
   const customPageSize = useStore((s) => s.customPageSize);
   const setCustomPageSize = useStore((s) => s.setCustomPageSize);
+  const aspectRatioLocked = useStore((s) => s.aspectRatioLocked);
+  const setAspectRatioLocked = useStore((s) => s.setAspectRatioLocked);
 
   const isCustomSize = !PAGE_SIZES.find(
     (s) => s.widthMm === pageSize.widthMm && s.heightMm === pageSize.heightMm
@@ -105,7 +107,7 @@ export function GlobalSettings() {
         </span>
       </div>
 
-      {/* Image size — unified slider + W/H fields */}
+      {/* Image size — unified slider + W/H fields with aspect ratio lock */}
       <div className="section">
         <span className="section-label">Image Size</span>
         <input
@@ -136,15 +138,50 @@ export function GlobalSettings() {
             min={10}
             max={100}
             unit="%"
-            onChange={(v) => setGlobalConfig({ imageWidthPct: v, photoScale: v / 100 })}
+            onChange={(v) => {
+              if (aspectRatioLocked) {
+                const ratio = globalConfig.imageHeightPct / globalConfig.imageWidthPct;
+                const newH = Math.round(Math.max(10, Math.min(100, v * ratio)));
+                setGlobalConfig({ imageWidthPct: v, imageHeightPct: newH, photoScale: v / 100 });
+              } else {
+                setGlobalConfig({ imageWidthPct: v, photoScale: v / 100 });
+              }
+            }}
           />
+          <button
+            className={`aspect-ratio-lock ${aspectRatioLocked ? 'locked' : ''}`}
+            onClick={() => setAspectRatioLocked(!aspectRatioLocked)}
+            title={aspectRatioLocked ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+              {aspectRatioLocked ? (
+                <>
+                  <rect x="3" y="7" width="10" height="7" rx="1.5" />
+                  <path d="M5 7V5a3 3 0 0 1 6 0v2" />
+                </>
+              ) : (
+                <>
+                  <rect x="3" y="7" width="10" height="7" rx="1.5" />
+                  <path d="M5 7V5a3 3 0 0 1 6 0" />
+                </>
+              )}
+            </svg>
+          </button>
           <StepperInput
             label="H"
             value={Math.round(globalConfig.imageHeightPct)}
             min={10}
             max={100}
             unit="%"
-            onChange={(v) => setGlobalConfig({ imageHeightPct: v })}
+            onChange={(v) => {
+              if (aspectRatioLocked) {
+                const ratio = globalConfig.imageWidthPct / globalConfig.imageHeightPct;
+                const newW = Math.round(Math.max(10, Math.min(100, v * ratio)));
+                setGlobalConfig({ imageWidthPct: newW, imageHeightPct: v });
+              } else {
+                setGlobalConfig({ imageHeightPct: v });
+              }
+            }}
           />
         </div>
       </div>

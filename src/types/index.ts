@@ -1,4 +1,39 @@
-export type SortMode = 'name' | 'date-newest' | 'date-oldest' | 'random' | 'size-smallest' | 'size-largest' | 'reverse-name' | 'type';
+export type SortMode = 'name' | 'date-newest' | 'date-oldest' | 'random' | 'size-smallest' | 'size-largest' | 'reverse-name' | 'type' | 'season';
+
+export type Season = 'winter' | 'spring' | 'summer' | 'autumn';
+
+/**
+ * Returns the season for a given timestamp based on the month.
+ * Winter: Dec, Jan, Feb | Spring: Mar, Apr, May | Summer: Jun, Jul, Aug | Autumn: Sep, Oct, Nov
+ */
+export function getSeasonFromTimestamp(timestamp: number): Season {
+  const month = new Date(timestamp).getMonth(); // 0-11
+  if (month === 11 || month === 0 || month === 1) return 'winter';
+  if (month >= 2 && month <= 4) return 'spring';
+  if (month >= 5 && month <= 7) return 'summer';
+  return 'autumn';
+}
+
+export const SEASON_ORDER: Record<Season, number> = {
+  winter: 0,
+  spring: 1,
+  summer: 2,
+  autumn: 3,
+};
+
+export const SEASON_LABELS: Record<Season, string> = {
+  winter: 'Winter',
+  spring: 'Spring',
+  summer: 'Summer',
+  autumn: 'Autumn',
+};
+
+export const SEASON_ICONS: Record<Season, string> = {
+  winter: '\u2744',   // snowflake
+  spring: '\uD83C\uDF38',  // cherry blossom
+  summer: '\u2600',   // sun
+  autumn: '\uD83C\uDF42',  // fallen leaf
+};
 
 // Normalized position: x/y are percentages (0-100) of page dimensions
 export interface Position {

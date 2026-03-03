@@ -6,7 +6,7 @@ import type {
   SortMode,
   PageSize,
 } from '../types';
-import { DEFAULT_PAGE_CONFIG, PAGE_SIZES } from '../types';
+import { DEFAULT_PAGE_CONFIG, PAGE_SIZES, getSeasonFromTimestamp, SEASON_ORDER } from '../types';
 
 export function sortPhotos(photos: PhotoEntry[], mode: SortMode): PhotoEntry[] {
   // Separate empty pages from real photos so empty pages keep their positions
@@ -66,6 +66,15 @@ export function sortPhotos(photos: PhotoEntry[], mode: SortMode): PhotoEntry[] {
         const extB = b.name.split('.').pop()?.toLowerCase() || '';
         if (extA !== extB) return extA.localeCompare(extB);
         return a.name.localeCompare(b.name);
+      });
+      break;
+    case 'season':
+      sorted.sort((a, b) => {
+        const seasonA = SEASON_ORDER[getSeasonFromTimestamp(a.lastModified)];
+        const seasonB = SEASON_ORDER[getSeasonFromTimestamp(b.lastModified)];
+        if (seasonA !== seasonB) return seasonA - seasonB;
+        // Within same season, sort by date
+        return a.lastModified - b.lastModified;
       });
       break;
   }
@@ -154,6 +163,10 @@ interface AppState {
   generationProgress: number;
   setIsGenerating: (v: boolean) => void;
   setGenerationProgress: (v: number) => void;
+
+  // Aspect ratio lock for image resize
+  aspectRatioLocked: boolean;
+  setAspectRatioLocked: (v: boolean) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -330,6 +343,9 @@ export const useStore = create<AppState>((set, get) => ({
   generationProgress: 0,
   setIsGenerating: (v) => set({ isGenerating: v }),
   setGenerationProgress: (v) => set({ generationProgress: v }),
+
+  aspectRatioLocked: true,
+  setAspectRatioLocked: (v) => set({ aspectRatioLocked: v }),
 }));
 
 /**

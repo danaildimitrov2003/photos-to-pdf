@@ -2,6 +2,8 @@ import { useMemo, useRef, useCallback, useState } from 'react';
 import { useStore, resolvePageConfig } from '../store/useStore';
 import type { Position } from '../types';
 import { computeEffectiveImageDims } from '../utils/imageFit';
+import { getSeasonFromTimestamp, SEASON_LABELS, SEASON_ICONS, SEASON_ORDER } from '../types';
+import type { Season } from '../types';
 
 type DragTarget = 'image' | 'pageNumber' | 'title' | null;
 type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w' | null;
@@ -30,6 +32,8 @@ export function Preview() {
   const setPageOverride = useStore((s) => s.setPageOverride);
   const numberingStartPage = useStore((s) => s.numberingStartPage);
   const pageSize = useStore((s) => s.pageSize);
+  const sortMode = useStore((s) => s.sortMode);
+  const aspectRatioLocked = useStore((s) => s.aspectRatioLocked);
 
   const config = resolvePageConfig(globalConfig, pageOverrides, currentPage);
 
@@ -113,6 +117,55 @@ export function Preview() {
       pageSize.heightMm,
     );
   }, [photo, isEmptyPage, config, pageOverrides, currentPage, pageSize.widthMm, pageSize.heightMm]);
+
+  // Compute season page ranges when sort mode is 'season'
+  const seasonInfo = useMemo(() => {
+    if (sortMode !== 'season' || photos.length === 0) return null;
+
+    const ranges: { season: Season; label: string; icon: string; startPage: number; endPage: number }[] = [];
+    let currentSeason: Season | null = null;
+    let rangeStart = 0;
+
+    photos.forEach((p, i) => {
+      if (p.isEmpty) return;
+      const season = getSeasonFromTimestamp(p.lastModified);
+      if (season !== currentSeason) {
+        if (currentSeason !== null) {
+          ranges.push({
+            season: currentSeason,
+            label: SEASON_LABELS[currentSeason],
+            icon: SEASON_ICONS[currentSeason],
+            startPage: rangeStart + 1,
+            endPage: i,
+          });
+        }
+        currentSeason = season;
+        rangeStart = i;
+      }
+    });
+
+    // Close the last range
+    if (currentSeason !== null) {
+      ranges.push({
+        season: currentSeason,
+        label: SEASON_LABELS[currentSeason],
+        icon: SEASON_ICONS[currentSeason],
+        startPage: rangeStart + 1,
+        endPage: photos.length,
+      });
+    }
+
+    // Sort by season order
+    ranges.sort((a, b) => SEASON_ORDER[a.season] - SEASON_ORDER[b.season]);
+
+    // Find which season the current page belongs to
+    const currentPhoto = photos[currentPage];
+    const currentPageSeason = currentPhoto && !currentPhoto.isEmpty
+      ? getSeasonFromTimestamp(currentPhoto.lastModified)
+      : null;
+
+    return { ranges, currentPageSeason };
+  }, [sortMode, photos, currentPage]);
 
   // Drag handler for moving elements
   const handleMouseDown = useCallback(
@@ -274,19 +327,67 @@ export function Preview() {
             };
           }
         } else {
-          // Edge resize: stretch freely (changes one dimension, image may distort)
-          if (handle === 'e') {
-            newW = Math.max(10, Math.min(100, startW + dPctX));
-            newPos = { x: startPos.x - (startW - newW) / 2, y: startPos.y };
-          } else if (handle === 'w') {
-            newW = Math.max(10, Math.min(100, startW - dPctX));
-            newPos = { x: startPos.x + (startW - newW) / 2, y: startPos.y };
-          } else if (handle === 's') {
-            newH = Math.max(10, Math.min(100, startH + dPctY));
-            newPos = { x: startPos.x, y: startPos.y - (startH - newH) / 2 };
-          } else if (handle === 'n') {
-            newH = Math.max(10, Math.min(100, startH - dPctY));
-            newPos = { x: startPos.x, y: startPos.y + (startH - newH) / 2 };
+          // Edge resize: when aspect ratio is locked, also preserve ratio
+          if (aspectRatioLocked) {
+            // Compute the primary delta based on which edge
+            let dW = 0;
+            let dH = 0;
+
+            if (handle === 'e') { dW = dPctX; }
+            else if (handle === 'w') { dW = -dPctX; }
+            else if (handle === 's') { dH = dPctY; }
+            else if (handle === 'n') { dH = -dPctY; }
+
+            // Derive the other dimension from aspect ratio
+            if (handle === 'e' || handle === 'w') {
+              newW = Math.max(10, Math.min(100, startW + dW));
+              const realW = (newW / 100) * pageSize.widthMm;
+              const realH = realW / aspect;
+              newH = Math.max(10, Math.min(100, (realH / pageSize.heightMm) * 100));
+            } else {
+              newH = Math.max(10, Math.min(100, startH + dH));
+              const realH = (newH / 100) * pageSize.heightMm;
+              const realW = realH * aspect;
+              newW = Math.max(10, Math.min(100, (realW / pageSize.widthMm) * 100));
+            }
+
+            // Adjust position so the opposite edge stays fixed
+            if (handle === 'e') {
+              newPos = {
+                x: startPos.x - (startW - newW) / 2,
+                y: startPos.y - (startH - newH) / 2,
+              };
+            } else if (handle === 'w') {
+              newPos = {
+                x: startPos.x + (startW - newW) / 2,
+                y: startPos.y - (startH - newH) / 2,
+              };
+            } else if (handle === 's') {
+              newPos = {
+                x: startPos.x - (startW - newW) / 2,
+                y: startPos.y - (startH - newH) / 2,
+              };
+            } else if (handle === 'n') {
+              newPos = {
+                x: startPos.x - (startW - newW) / 2,
+                y: startPos.y + (startH - newH) / 2,
+              };
+            }
+          } else {
+            // Unlocked: stretch freely (changes one dimension, image may distort)
+            if (handle === 'e') {
+              newW = Math.max(10, Math.min(100, startW + dPctX));
+              newPos = { x: startPos.x - (startW - newW) / 2, y: startPos.y };
+            } else if (handle === 'w') {
+              newW = Math.max(10, Math.min(100, startW - dPctX));
+              newPos = { x: startPos.x + (startW - newW) / 2, y: startPos.y };
+            } else if (handle === 's') {
+              newH = Math.max(10, Math.min(100, startH + dPctY));
+              newPos = { x: startPos.x, y: startPos.y - (startH - newH) / 2 };
+            } else if (handle === 'n') {
+              newH = Math.max(10, Math.min(100, startH - dPctY));
+              newPos = { x: startPos.x, y: startPos.y + (startH - newH) / 2 };
+            }
           }
         }
 
@@ -309,7 +410,7 @@ export function Preview() {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     },
-    [effectiveDims.widthPct, effectiveDims.heightPct, config.imagePosition, currentPage, setPageOverride, pageSize.widthMm, pageSize.heightMm]
+    [effectiveDims.widthPct, effectiveDims.heightPct, config.imagePosition, currentPage, setPageOverride, pageSize.widthMm, pageSize.heightMm, aspectRatioLocked]
   );
 
   // Resize handler for title bounding box (free resize, no aspect lock)
@@ -540,6 +641,22 @@ export function Preview() {
           Next &rarr;
         </button>
       </div>
+
+      {/* Season info when sorted by season */}
+      {seasonInfo && (
+        <div className="season-info">
+          {seasonInfo.ranges.map((r) => (
+            <span
+              key={r.season}
+              className={`season-tag ${r.season === seasonInfo.currentPageSeason ? 'season-tag-active' : ''}`}
+            >
+              <span className="season-icon">{r.icon}</span>
+              <span className="season-label">{r.label}</span>
+              <span className="season-pages">pp. {r.startPage}{r.startPage !== r.endPage ? `\u2013${r.endPage}` : ''}</span>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

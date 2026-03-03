@@ -11,6 +11,7 @@ const SORT_LABELS: Record<SortMode, string> = {
   'size-largest': 'File size (largest first)',
   'type': 'File type (grouped)',
   'random': 'Random shuffle',
+  'season': 'Season (Winter \u2192 Autumn)',
 };
 
 export function PhotoLoader() {

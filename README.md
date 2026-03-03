@@ -6,14 +6,16 @@ A client-side tool for creating photo albums from images directly into PDFs. Sel
 
 ### Photo Import & Sorting
 - **Folder import** -- Select a folder of images (PNG, JPG, etc.)
-- **6 sort modes** -- By name (numeric), reverse name, date modified, file size, file type, or random shuffle
+- **9 sort modes** -- By name (numeric), reverse name, date modified, file size, file type, random shuffle, or **by season** (Winter, Spring, Summer, Autumn -- based on file modification date)
+- **Season view** -- When sorted by season, a season info bar appears below the preview showing which pages belong to each season with icons and page ranges, highlighting the current page's season
 
 ### Page Layout & Customization
 - **7 page size presets** -- A4, Letter, A3, A5, Square, 4x6 Photo, 5x7 Photo, plus custom dimensions (mm)
 - **Insert empty pages** -- Add blank pages anywhere in the album for section dividers, title pages, or notes. Empty pages support titles, page numbers, and background colors. You can also assign a photo to an empty page later.
 - **Delete pages** -- Remove any page from the album
 - **Draggable elements** -- Drag the image, page number, and title freely within the page preview, with snap guides at common positions
-- **Resizable images** -- 8 resize handles: corner handles preserve aspect ratio, edge handles stretch freely
+- **Resizable images** -- 8 resize handles: corner handles always preserve aspect ratio, edge handles respect the aspect ratio lock toggle
+- **Aspect ratio lock** -- Photoshop-style lock/unlock toggle between the W% and H% inputs. When locked (default), changing one dimension automatically adjusts the other to maintain the ratio -- applies to both stepper inputs and drag-resize handles. When unlocked, dimensions are independent.
 - **Image sizing** -- Unified slider (scales proportionally) + independent W%/H% stepper inputs
 - **Aspect-ratio-aware defaults** -- Each photo starts at its natural aspect ratio, fit within the global bounding box. Manual resizing overrides this per-page.
 - **Per-page overrides** -- Each page can override: image size/position, font, font size, font color, background color, page number visibility, title, and cover toggle. Each override has a "Reset" button to revert to the global default.
@@ -75,8 +77,9 @@ npm run build
 2. Adjust global settings (page size, image size, font, colors, numbering) in the **Global** tab.
 3. Switch to the **This Page** tab to override settings for individual pages.
 4. Use **Insert Empty Page** to add blank pages for section dividers or title pages. You can assign a photo to an empty page with the **Add Photo** button.
-5. Drag elements in the preview to reposition them. Drag image corners to resize (preserves aspect ratio) or edges to stretch freely. Title boxes can be resized the same way to control the text flow area.
-6. Click **Generate PDF** to export. The PDF will download as `photo-album.pdf`.
+5. Drag elements in the preview to reposition them. Drag image corners to resize (always preserves aspect ratio) or edges (respects the lock toggle). Use the lock/unlock button between W% and H% to control whether dimensions stay linked. Title boxes can be resized the same way to control the text flow area.
+6. Use the **Season** sort mode to group photos by the season they were taken (based on file modification date). A season bar below the preview shows page ranges for each season.
+7. Click **Generate PDF** to export. The PDF will download as `photo-album.pdf`.
 
 ## Project Structure
 

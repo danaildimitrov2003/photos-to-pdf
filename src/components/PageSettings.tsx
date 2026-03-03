@@ -19,6 +19,8 @@ export function PageSettings() {
   const setPagePhoto = useStore((s) => s.setPagePhoto);
   const clearPagePhoto = useStore((s) => s.clearPagePhoto);
   const deletePage = useStore((s) => s.deletePage);
+  const aspectRatioLocked = useStore((s) => s.aspectRatioLocked);
+  const setAspectRatioLocked = useStore((s) => s.setAspectRatioLocked);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -231,15 +233,50 @@ export function PageSettings() {
               min={10}
               max={100}
               unit="%"
-              onChange={(v) => setPageOverride(currentPage, { imageWidthPct: v, photoScale: v / 100 })}
+              onChange={(v) => {
+                if (aspectRatioLocked) {
+                  const ratio = effectiveDims.heightPct / effectiveDims.widthPct;
+                  const newH = Math.round(Math.max(10, Math.min(100, v * ratio)));
+                  setPageOverride(currentPage, { imageWidthPct: v, imageHeightPct: newH, photoScale: v / 100 });
+                } else {
+                  setPageOverride(currentPage, { imageWidthPct: v, photoScale: v / 100 });
+                }
+              }}
             />
+            <button
+              className={`aspect-ratio-lock ${aspectRatioLocked ? 'locked' : ''}`}
+              onClick={() => setAspectRatioLocked(!aspectRatioLocked)}
+              title={aspectRatioLocked ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                {aspectRatioLocked ? (
+                  <>
+                    <rect x="3" y="7" width="10" height="7" rx="1.5" />
+                    <path d="M5 7V5a3 3 0 0 1 6 0v2" />
+                  </>
+                ) : (
+                  <>
+                    <rect x="3" y="7" width="10" height="7" rx="1.5" />
+                    <path d="M5 7V5a3 3 0 0 1 6 0" />
+                  </>
+                )}
+              </svg>
+            </button>
             <StepperInput
               label="H"
               value={Math.round(effectiveDims.heightPct)}
               min={10}
               max={100}
               unit="%"
-              onChange={(v) => setPageOverride(currentPage, { imageHeightPct: v })}
+              onChange={(v) => {
+                if (aspectRatioLocked) {
+                  const ratio = effectiveDims.widthPct / effectiveDims.heightPct;
+                  const newW = Math.round(Math.max(10, Math.min(100, v * ratio)));
+                  setPageOverride(currentPage, { imageWidthPct: newW, imageHeightPct: v });
+                } else {
+                  setPageOverride(currentPage, { imageHeightPct: v });
+                }
+              }}
             />
           </div>
         </div>

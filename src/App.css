@@ -1021,6 +1021,87 @@ select {
   align-items: center;
 }
 
+/* ==================== Aspect Ratio Lock (Photoshop-style) ==================== */
+.aspect-ratio-lock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+}
+
+.aspect-ratio-lock:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.aspect-ratio-lock.locked {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(37, 99, 235, 0.12);
+}
+
+.aspect-ratio-lock svg {
+  display: block;
+}
+
+/* ==================== Season Info ==================== */
+.season-info {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-width: 420px;
+}
+
+.season-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  transition: all 0.15s;
+}
+
+.season-tag-active {
+  color: var(--text-primary);
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+.season-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.season-label {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.season-pages {
+  opacity: 0.7;
+  font-size: 0.65rem;
+}
+
 /* ==================== Empty Page ==================== */
 .empty-page-tag {
   display: inline-block;
